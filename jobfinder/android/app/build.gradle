@@ -1,0 +1,47 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+    id 'com.google.gms.google-services' // Đã thêm plugin Google Services
+}
+
+android {
+    namespace = "com.example.jobfinder"
+    compileSdk = flutter.compileSdkVersion // Sử dụng compileSdk từ Flutter config
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8
+    }
+
+    defaultConfig {
+        applicationId = "com.example.jobfinder" // Application ID
+        minSdkVersion 23 // Đặt minSdkVersion thành 23
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.debug // Debug signing config (cần đổi khi xuất bản)
+        }
+    }
+}
+
+flutter {
+    source = "../.." // Flutter source directory
+}
+
+dependencies {
+    implementation platform('com.google.firebase:firebase-bom:33.7.0') // Firebase BOM
+    implementation 'com.google.firebase:firebase-analytics'
+    // Thêm các dependencies Firebase khác nếu cần, ví dụ:
+    // implementation 'com.google.firebase:firebase-auth-ktx'
+}

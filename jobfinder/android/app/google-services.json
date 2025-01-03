@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "920127770568",
+    "project_id": "jobsphere-55858",
+    "storage_bucket": "jobsphere-55858.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:920127770568:android:ec859305fc3dfd4dcefafd",
+        "android_client_info": {
+          "package_name": "com.example.jobfinder"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDmQaeba-36cPJxSQWNji0opSIOZFwde40"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

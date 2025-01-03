@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="gcm_defaultSenderId" translatable="false">920127770568</string>
+    <string name="google_api_key" translatable="false">AIzaSyDmQaeba-36cPJxSQWNji0opSIOZFwde40</string>
+    <string name="google_app_id" translatable="false">1:920127770568:android:ec859305fc3dfd4dcefafd</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyDmQaeba-36cPJxSQWNji0opSIOZFwde40</string>
+    <string name="google_storage_bucket" translatable="false">jobsphere-55858.firebasestorage.app</string>
+    <string name="project_id" translatable="false">jobsphere-55858</string>
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        
+        <item name="android:windowBackground">@drawable/launch_background</item>
+    </style>
+    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">?android:colorBackground</item>
+    </style>
+</resources>
