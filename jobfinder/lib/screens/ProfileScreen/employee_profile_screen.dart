@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -42,15 +43,15 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
         actions: [
           IconButton(
             icon: Icon(Icons.logout),
-            onPressed: _logout, // Gọi hàm đăng xuất
+            onPressed: () => _confirmLogout(context), // Gọi xác nhận đăng xuất
           ),
         ],
       ),
-      body: FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
             .collection('users') // Collection trên Firestore
             .doc(widget.userId) // Lấy tài liệu theo userId
-            .get(),
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -65,6 +66,11 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
           // Dữ liệu người dùng từ Firestore
           Map<String, dynamic> userData =
               snapshot.data!.data() as Map<String, dynamic>;
+
+          // Cập nhật _selectedExperience từ dữ liệu Firestore
+          if (_selectedExperience != userData['experience']) {
+            _selectedExperience = userData['experience'] ?? "Chưa có";
+          }
 
           return SingleChildScrollView(
             padding: EdgeInsets.all(16.0),
@@ -367,15 +373,14 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
               initialItem:
                   _experienceOptions.indexOf(currentExperience ?? "Chưa có"),
             ),
-            onSelectedItemChanged: (index) {
+            onSelectedItemChanged: (index) async {
+              String newExperience = _experienceOptions[index];
               setState(() {
-                _selectedExperience = _experienceOptions[index];
-                if (_selectedExperience == "Chưa có") {
-                  _updateField('experience', "Sắp đi làm");
-                } else {
-                  _updateField('experience', _selectedExperience);
-                }
+                _selectedExperience = newExperience;
               });
+
+              // Cập nhật Firebase
+              await _updateField('experience', newExperience);
             },
             children: _experienceOptions.map((option) {
               return Center(child: Text(option));
@@ -397,10 +402,116 @@ class _EmployeeProfileScreenState extends State<EmployeeProfileScreen> {
 
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
+
+    // Hiển thị thông báo đăng xuất thành công
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Đăng xuất thành công!")),
+    );
+
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => LoginScreen()),
       (route) => false,
+    );
+  }
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          child: Container(
+            padding: EdgeInsets.all(20.0),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20.0),
+              color: Colors.white,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FaIcon(
+                  FontAwesomeIcons.signOutAlt,
+                  size: 60.0,
+                  color: Colors.redAccent,
+                ),
+                SizedBox(height: 20.0),
+                Text(
+                  "Bạn có chắc chắn muốn đăng xuất?",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 10.0),
+                Text(
+                  "Khi đăng xuất, bạn sẽ cần đăng nhập lại để sử dụng ứng dụng.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14.0,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                SizedBox(height: 20.0),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey[300],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 30.0,
+                          vertical: 12.0,
+                        ),
+                      ),
+                      child: Text(
+                        "Hủy",
+                        style: TextStyle(
+                          fontSize: 16.0,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _logout(); // Gọi hàm đăng xuất
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 30.0,
+                          vertical: 12.0,
+                        ),
+                      ),
+                      child: Text(
+                        "Đăng xuất",
+                        style: TextStyle(
+                          fontSize: 16.0,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -12,7 +12,20 @@
           "package_name": "com.example.jobfinder"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "920127770568-ns4sahr6r4i4t7h41omvj25edhe4mvg9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.jobfinder",
+            "certificate_hash": "ceae03e4a553e41b07264f8056101411f3be8109"
+          }
+        },
+        {
+          "client_id": "920127770568-t5ehdcphrr3811p9r0hhb5k6nf00q0g3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDmQaeba-36cPJxSQWNji0opSIOZFwde40"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "920127770568-t5ehdcphrr3811p9r0hhb5k6nf00q0g3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

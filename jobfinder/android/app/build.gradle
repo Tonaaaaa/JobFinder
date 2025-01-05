@@ -14,6 +14,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
+        coreLibraryDesugaringEnabled true // Bật desugaring
     }
 
     kotlinOptions {
@@ -41,7 +42,8 @@ flutter {
 
 dependencies {
     implementation platform('com.google.firebase:firebase-bom:33.7.0') // Firebase BOM
-    implementation 'com.google.firebase:firebase-analytics'
-    // Thêm các dependencies Firebase khác nếu cần, ví dụ:
-    // implementation 'com.google.firebase:firebase-auth-ktx'
+    implementation 'com.google.firebase:firebase-auth' // Firebase Auth
+    implementation 'com.google.android.gms:play-services-auth:20.6.0' // Google Sign-In
+    implementation 'com.google.firebase:firebase-messaging'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3' // Thêm thư viện desugaring
 }

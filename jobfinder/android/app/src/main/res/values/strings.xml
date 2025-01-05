@@ -1,0 +1,13 @@
+<resources>
+    <!-- Tên ứng dụng -->
+    <string name="app_name">Job Finder</string>
+
+    <!-- Facebook App ID -->
+    <string name="facebook_app_id">417815428079783</string>
+
+    <!-- Facebook Client Token -->
+    <string name="facebook_client_token">404f3563d53c7e7774d096f7363cad43</string>
+
+    <!-- Google API Key (nếu có) -->
+    <string name="google_api_key">YOUR_GOOGLE_API_KEY</string>
+</resources>

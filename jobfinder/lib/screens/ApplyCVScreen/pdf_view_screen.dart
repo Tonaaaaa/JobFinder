@@ -33,7 +33,7 @@ class _PdfViewScreenState extends State<PdfViewScreen> {
         "Accept": "application/pdf",
       };
 
-      // Tải tệp từ Cloudinary
+      // Tải tệp từ URL
       await dio.download(widget.url, path);
 
       setState(() {
@@ -41,10 +41,8 @@ class _PdfViewScreenState extends State<PdfViewScreen> {
         isLoading = false;
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Lỗi khi tải PDF: $e")),
-      );
       setState(() {
+        localPath = null;
         isLoading = false;
       });
     }
@@ -52,13 +50,28 @@ class _PdfViewScreenState extends State<PdfViewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Hiển thị thông báo lỗi nếu `localPath` là null
+    if (localPath == null && !isLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Lỗi khi tải PDF")),
+        );
+      });
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text("Xem CV"),
-        backgroundColor: Colors.blueAccent,
+        title: Text(
+          "Xem CV",
+          style: TextStyle(color: Colors.white), // Thay đổi màu chữ thành trắng
+        ),
+        backgroundColor: Colors.black,
+        iconTheme:
+            IconThemeData(color: Colors.white), // Màu biểu tượng nút back
       ),
+      backgroundColor: Colors.black, // Nền của màn hình
       body: isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: Colors.white))
           : localPath != null
               ? PDFView(
                   filePath: localPath!,
@@ -66,19 +79,29 @@ class _PdfViewScreenState extends State<PdfViewScreen> {
                   swipeHorizontal: true,
                   autoSpacing: true,
                   pageFling: true,
+                  backgroundColor: Colors.black, // Nền của PDF
                   onError: (error) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Lỗi hiển thị PDF: $error")),
-                    );
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Lỗi hiển thị PDF: $error")),
+                      );
+                    });
                   },
                   onRender: (pages) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text("PDF tải thành công, $pages trang!")),
-                    );
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text("PDF tải thành công, $pages trang!")),
+                      );
+                    });
                   },
                 )
-              : Center(child: Text("Không thể tải PDF")),
+              : Center(
+                  child: Text(
+                    "Không thể tải PDF",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
     );
   }
 }

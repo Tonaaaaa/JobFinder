@@ -1,108 +1,101 @@
-import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class JobPostModel {
-  final String jobId;
-  final String userId;
-  final String title;
-  final String companyName;
-  final String jobDescription;
-  final String requiredExperience;
-  final String employmentType;
-  final String salaryRange;
-  final String workLocation;
-  final String genderRequirement;
-  final String jobLevel;
-  final int vacancies;
-  final DateTime applicationDeadline;
-  final List<String> candidateRequirements; // Yêu cầu ứng viên
-  final List<String> benefits;
-  final String detailedAddress; // Địa chỉ chi tiết
-  final String? companyLogo;
+  String? id; // ID của bài đăng
+  String? title; // Tiêu đề công việc
+  String? companyName; // Tên công ty
+  String? logoUrl; // URL của logo công ty
+  String? industry; // Ngành nghề của công ty
+  String? description; // Mô tả công việc
+  String? requiredExperience; // Kinh nghiệm yêu cầu
+  String? employmentType; // Hình thức làm việc (Full-time, Part-time, Freelance)
+  String? genderRequirement; // Yêu cầu giới tính (nếu có)
+  String? jobLevel; // Cấp bậc công việc (Intern, Junior, Senior, Manager)
+  String? salaryRange; // Mức lương
+  String? workLocation; // Địa điểm làm việc
+  String? detailedAddress; // Địa chỉ chi tiết
+  int? vacancies; // Số lượng tuyển dụng
+  List<String>? benefits; // Các quyền lợi
+  List<String>? candidateRequirements; // Yêu cầu ứng viên
+  DateTime? applicationDeadline; // Hạn nộp hồ sơ
+  DateTime? createdAt; // Ngày tạo bài đăng
+  String? userId; // ID người dùng đăng bài (recruiter)
 
+  // Constructor
   JobPostModel({
-    required this.jobId,
-    required this.userId,
-    required this.title,
-    required this.companyName,
-    required this.jobDescription,
-    required this.requiredExperience,
-    required this.employmentType,
-    required this.salaryRange,
-    required this.workLocation,
-    required this.genderRequirement,
-    required this.jobLevel,
-    required this.vacancies,
-    required this.applicationDeadline,
-    required this.candidateRequirements,
-    required this.benefits,
-    required this.detailedAddress,
-    this.companyLogo,
+    this.id,
+    this.title,
+    this.companyName,
+    this.logoUrl,
+    this.industry,
+    this.description,
+    this.requiredExperience,
+    this.employmentType,
+    this.genderRequirement,
+    this.jobLevel,
+    this.salaryRange,
+    this.workLocation,
+    this.detailedAddress,
+    this.vacancies,
+    this.benefits,
+    this.candidateRequirements,
+    this.applicationDeadline,
+    this.createdAt,
+    this.userId,
   });
 
-  // Chuyển đổi từ JSON sang JobPostModel
-  factory JobPostModel.fromJson(Map<String, dynamic> json) {
-    String rawDate = json['applicationDeadline'] as String? ?? '';
-    DateTime parsedDate;
-
-    try {
-      if (RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(rawDate)) {
-        parsedDate = DateFormat('dd/MM/yyyy').parse(rawDate);
-      } else {
-        parsedDate = DateTime.parse(rawDate);
-      }
-    } catch (e) {
-      parsedDate = DateTime.now();
-    }
-
+  // Factory method để chuyển đổi từ Firestore
+  factory JobPostModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
     return JobPostModel(
-      jobId: json['jobId'] as String? ?? '',
-      userId: json['userId'] as String? ?? '',
-      title: json['title'] as String? ?? 'Không có tiêu đề',
-      companyName: json['companyName'] as String? ?? 'Không có công ty',
-      jobDescription: json['jobDescription'] as String? ?? 'Không có mô tả',
-      requiredExperience:
-          json['requiredExperience'] as String? ?? 'Không yêu cầu',
-      employmentType: json['employmentType'] as String? ?? 'Không yêu cầu',
-      salaryRange: json['salaryRange'] as String? ?? 'Không xác định',
-      workLocation: json['workLocation'] as String? ?? 'Không xác định',
-      genderRequirement:
-          json['genderRequirement'] as String? ?? 'Không yêu cầu',
-      jobLevel: json['jobLevel'] as String? ?? 'Không yêu cầu',
-      vacancies: json['vacancies'] as int? ?? 0,
-      applicationDeadline: parsedDate,
-      candidateRequirements: (json['candidateRequirements'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          [],
-      benefits: (json['benefits'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          [],
-      detailedAddress: json['detailedAddress'] as String? ?? 'Không xác định',
-      companyLogo: json['companyLogo'] as String?,
+      id: doc.id,
+      title: data['title'] ?? '',
+      companyName: data['companyName'] ?? '',
+      logoUrl: data['logoUrl'] ?? '',
+      industry: data['industry'] ?? 'Không rõ ngành nghề',
+      description: data['description'] ?? '',
+      requiredExperience: data['requiredExperience'] ?? '',
+      employmentType: data['employmentType'] ?? '',
+      genderRequirement: data['genderRequirement'] ?? '',
+      jobLevel: data['jobLevel'] ?? '',
+      salaryRange: data['salaryRange'] ?? '',
+      workLocation: data['workLocation'] ?? '',
+      detailedAddress: data['detailedAddress'] ?? '',
+      vacancies: data['vacancies'] ?? 0,
+      benefits: List<String>.from(data['benefits'] ?? []),
+      candidateRequirements:
+          List<String>.from(data['candidateRequirements'] ?? []),
+      applicationDeadline: data['applicationDeadline'] != null
+          ? (data['applicationDeadline'] as Timestamp).toDate()
+          : null,
+      createdAt: data['createdAt'] != null
+          ? (data['createdAt'] as Timestamp).toDate()
+          : null,
+      userId: data['userId'] ?? '',
     );
   }
 
-  // Chuyển đổi sang JSON
-  Map<String, dynamic> toJson() {
+  // Chuyển đổi sang Map để lưu vào Firestore
+  Map<String, dynamic> toFirestore() {
     return {
-      'jobId': jobId,
-      'userId': userId,
       'title': title,
       'companyName': companyName,
-      'jobDescription': jobDescription,
+      'logoUrl': logoUrl,
+      'industry': industry ?? 'Không rõ ngành nghề',
+      'description': description,
       'requiredExperience': requiredExperience,
       'employmentType': employmentType,
-      'salaryRange': salaryRange,
-      'workLocation': workLocation,
       'genderRequirement': genderRequirement,
       'jobLevel': jobLevel,
-      'vacancies': vacancies,
-      'applicationDeadline': applicationDeadline.toIso8601String(),
-      'candidateRequirements': candidateRequirements,
-      'benefits': benefits,
+      'salaryRange': salaryRange,
+      'workLocation': workLocation,
       'detailedAddress': detailedAddress,
-      'companyLogo': companyLogo,
+      'vacancies': vacancies ?? 0,
+      'benefits': benefits ?? [],
+      'candidateRequirements': candidateRequirements ?? [],
+      'applicationDeadline': applicationDeadline,
+      'createdAt': createdAt ?? DateTime.now(),
+      'userId': userId,
     };
   }
 }

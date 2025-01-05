@@ -23,6 +23,7 @@ class _CvApprovalScreenState extends State<CvApprovalScreen> {
           'Duyệt CV Ứng Viên',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
+        centerTitle: true,
         backgroundColor: Colors.blueAccent,
         elevation: 0,
       ),

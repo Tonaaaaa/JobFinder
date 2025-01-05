@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:jobfinder/screens/HomeScreen/recruiter_home_screen.dart';
 import 'package:jobfinder/screens/MainScreen/recruiter_main_screen.dart';
 
 class CreateJobPostScreen extends StatefulWidget {
@@ -28,6 +27,8 @@ class _CreateJobPostScreenState extends State<CreateJobPostScreen> {
   // Controllers
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _companyNameController = TextEditingController();
+  final TextEditingController _industryController =
+      TextEditingController(); // Ngành nghề
   final TextEditingController _jobDescriptionController =
       TextEditingController();
   final TextEditingController _requiredExperienceController =
@@ -42,9 +43,10 @@ class _CreateJobPostScreenState extends State<CreateJobPostScreen> {
   final TextEditingController _vacanciesController = TextEditingController();
   final TextEditingController _benefitsController = TextEditingController();
   final TextEditingController _detailedAddressController =
-      TextEditingController(); // New
+      TextEditingController();
   final TextEditingController _candidateRequirementsController =
-      TextEditingController(); // New
+      TextEditingController();
+
   DateTime? _applicationDeadline;
   File? _companyLogoFile;
   String? _companyLogoUrl;
@@ -57,6 +59,8 @@ class _CreateJobPostScreenState extends State<CreateJobPostScreen> {
     if (widget.jobData != null) {
       _titleController.text = widget.jobData!['title'] ?? '';
       _companyNameController.text = widget.jobData!['companyName'] ?? '';
+      _industryController.text =
+          widget.jobData!['industry'] ?? ''; // Set ngành nghề nếu có
       _jobDescriptionController.text = widget.jobData!['jobDescription'] ?? '';
       _requiredExperienceController.text =
           widget.jobData!['requiredExperience'] ?? '';
@@ -70,11 +74,11 @@ class _CreateJobPostScreenState extends State<CreateJobPostScreen> {
       _benefitsController.text =
           (widget.jobData!['benefits'] as List<dynamic>?)?.join(',') ?? '';
       _detailedAddressController.text =
-          widget.jobData!['detailedAddress'] ?? ''; // New
+          widget.jobData!['detailedAddress'] ?? '';
       _candidateRequirementsController.text =
           (widget.jobData!['candidateRequirements'] as List<dynamic>?)
                   ?.join(',') ??
-              ''; // New
+              '';
       _companyLogoUrl = widget.jobData!['logoUrl'];
       if (widget.jobData!['applicationDeadline'] != null) {
         _applicationDeadline = DateFormat('dd/MM/yyyy')
@@ -87,9 +91,13 @@ class _CreateJobPostScreenState extends State<CreateJobPostScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.jobData == null
-            ? 'Tạo tin tuyển dụng'
-            : 'Chỉnh sửa tin tuyển dụng'),
+        title: Text(
+          widget.jobData == null
+              ? 'Tạo tin tuyển dụng'
+              : 'Chỉnh sửa tin tuyển dụng',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
         backgroundColor: Colors.blueAccent,
       ),
       body: SingleChildScrollView(
@@ -100,6 +108,8 @@ class _CreateJobPostScreenState extends State<CreateJobPostScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeaderSection(),
+              SizedBox(height: 20),
+              _buildIndustrySection(), // Phần nhập ngành nghề
               SizedBox(height: 20),
               _buildJobDescriptionSection(),
               SizedBox(height: 20),
@@ -174,6 +184,38 @@ class _CreateJobPostScreenState extends State<CreateJobPostScreen> {
               ),
               validator: (value) =>
                   value!.isEmpty ? 'Vui lòng nhập tên công ty' : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIndustrySection() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Ngành nghề',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            TextFormField(
+              controller: _industryController,
+              decoration: InputDecoration(
+                labelText: 'Ngành nghề',
+                hintText: 'Ví dụ: Công nghệ thông tin, Bán lẻ...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              validator: (value) =>
+                  value!.isEmpty ? 'Vui lòng nhập ngành nghề' : null,
             ),
           ],
         ),
@@ -365,7 +407,6 @@ class _CreateJobPostScreenState extends State<CreateJobPostScreen> {
 
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-
     if (pickedFile != null) {
       setState(() {
         _companyLogoFile = File(pickedFile.path);
@@ -408,6 +449,7 @@ class _CreateJobPostScreenState extends State<CreateJobPostScreen> {
         final jobPost = {
           'title': _titleController.text,
           'companyName': _companyNameController.text,
+          'industry': _industryController.text,
           'jobDescription': _jobDescriptionController.text,
           'requiredExperience': _requiredExperienceController.text,
           'employmentType': _employmentTypeController.text,
@@ -415,11 +457,11 @@ class _CreateJobPostScreenState extends State<CreateJobPostScreen> {
           'jobLevel': _jobLevelController.text,
           'salaryRange': _salaryRangeController.text,
           'workLocation': _workLocationController.text,
-          'detailedAddress': _detailedAddressController.text, // New field
+          'detailedAddress': _detailedAddressController.text,
           'vacancies': int.tryParse(_vacanciesController.text) ?? 0,
           'benefits': _benefitsController.text.split(','),
           'candidateRequirements':
-              _candidateRequirementsController.text.split(','), // New field
+              _candidateRequirementsController.text.split(','),
           'applicationDeadline':
               DateFormat('dd/MM/yyyy').format(_applicationDeadline!),
           'logoUrl': logoUrl ?? _companyLogoUrl,
