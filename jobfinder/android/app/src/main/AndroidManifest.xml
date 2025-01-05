@@ -1,14 +1,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.example.jobfinder">
 
     <!-- Quyền truy cập Internet -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Thêm quyền để nhận thông báo -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
         android:label="jobfinder"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
-        
+
         <!-- MainActivity là activity chính -->
         <activity
             android:name=".MainActivity"
@@ -40,10 +45,68 @@
             </intent-filter>
         </activity>
 
+        <!-- Firebase và Google Play Services -->
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
+
+        <!-- Firebase API Key (dành cho Firebase Authentication nếu có) -->
+        <meta-data
+            android:name="com.google.firebase.auth.API_KEY"
+            android:value="@string/google_api_key" />
+
         <!-- Không xóa meta-data này -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Cấu hình thông báo Firebase -->
+        <service
+            android:name="com.google.firebase.messaging.FirebaseMessagingService"
+            android:exported="true"
+            tools:replace="android:exported">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- Cấu hình để Firebase thông báo hoạt động -->
+        <receiver
+            android:name="com.google.firebase.iid.FirebaseInstanceIdReceiver"
+            android:exported="true"
+            android:permission="com.google.android.c2dm.permission.SEND">
+            <intent-filter>
+                <action android:name="com.google.android.c2dm.intent.RECEIVE" />
+                <category android:name="com.example.jobfinder" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Thêm cấu hình cho Facebook -->
+        <meta-data
+            android:name="com.facebook.sdk.ApplicationId"
+            android:value="@string/facebook_app_id" />
+
+        <meta-data
+            android:name="com.facebook.sdk.ClientToken"
+            android:value="@string/facebook_client_token" />
+
+        <!-- Activity xử lý đăng nhập Facebook -->
+        <activity
+            android:name="com.facebook.FacebookActivity"
+            android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation"
+            android:label="@string/app_name" />
+
+        <!-- Facebook CallbackManager -->
+        <activity
+            android:name="com.facebook.CustomTabMainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="fb417815428079783" />
+            </intent-filter>
+        </activity>
     </application>
 
     <!-- Để xử lý các intent PROCESS_TEXT -->

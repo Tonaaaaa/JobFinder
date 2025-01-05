@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:jobfinder/screens/DetailScreen/detail_job_screen.dart';
 
 class BookmarkedJobsScreen extends StatefulWidget {
@@ -68,31 +69,55 @@ class _BookmarkedJobsScreenState extends State<BookmarkedJobsScreen> {
               final jobData = jobDoc.data() as Map<String, dynamic>;
               final jobId = jobDoc.id;
 
-              return GestureDetector(
-                onTap: () async {
-                  // Truy vấn dữ liệu đầy đủ từ jobPosts
-                  final jobDoc = await FirebaseFirestore.instance
-                      .collection('jobPosts')
-                      .doc(jobId)
-                      .get();
-
-                  if (jobDoc.exists) {
-                    final fullJobData = jobDoc.data() as Map<String, dynamic>;
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => JobDetailsScreen(
-                          jobData: fullJobData,
-                        ),
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Công việc không tồn tại.')),
-                    );
+              // Kiểm tra trạng thái hết hạn
+              final deadline = jobData['applicationDeadline'];
+              bool isExpired = false;
+              if (deadline != null) {
+                DateTime? parsedDeadline;
+                if (deadline is Timestamp) {
+                  parsedDeadline = deadline.toDate();
+                } else if (deadline is String) {
+                  try {
+                    parsedDeadline = DateFormat('dd/MM/yyyy').parse(deadline);
+                  } catch (_) {
+                    parsedDeadline = null;
                   }
-                },
-                child: _buildEnhancedJobCard(
+                }
+
+                if (parsedDeadline != null &&
+                    parsedDeadline.isBefore(DateTime.now())) {
+                  isExpired = true;
+                }
+              }
+
+              return GestureDetector(
+                onTap: isExpired
+                    ? null
+                    : () async {
+                        // Truy vấn dữ liệu đầy đủ từ jobPosts
+                        final jobDoc = await FirebaseFirestore.instance
+                            .collection('jobPosts')
+                            .doc(jobId)
+                            .get();
+
+                        if (jobDoc.exists) {
+                          final fullJobData =
+                              jobDoc.data() as Map<String, dynamic>;
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => JobDetailsScreen(
+                                jobData: fullJobData,
+                              ),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Công việc không tồn tại.')),
+                          );
+                        }
+                      },
+                child: _EnhancedJobCard(
                   jobId: jobId,
                   title: jobData['title'] ?? 'Không có tiêu đề',
                   companyName: jobData['companyName'] ?? 'Không rõ công ty',
@@ -101,8 +126,9 @@ class _BookmarkedJobsScreenState extends State<BookmarkedJobsScreen> {
                   salaryRange: jobData['salaryRange'] ?? 'Không xác định',
                   applicationDeadline:
                       jobData['applicationDeadline'] ?? 'Không xác định',
-                  logoUrl:
-                      jobData['logoUrl'], // Đảm bảo sử dụng đúng trường logoUrl
+                  logoUrl: jobData['logoUrl'], // Sử dụng logoUrl để load ảnh
+                  isExpired: isExpired,
+                  userId: widget.userId,
                 ),
               );
             },
@@ -111,24 +137,48 @@ class _BookmarkedJobsScreenState extends State<BookmarkedJobsScreen> {
       ),
     );
   }
+}
 
-  Widget _buildEnhancedJobCard({
-    required String jobId,
-    required String title,
-    required String companyName,
-    required String workLocation,
-    required String employmentType,
-    required String salaryRange,
-    required String applicationDeadline,
-    String? logoUrl,
-  }) {
+class _EnhancedJobCard extends StatefulWidget {
+  final String jobId;
+  final String title;
+  final String companyName;
+  final String workLocation;
+  final String employmentType;
+  final String salaryRange;
+  final String applicationDeadline;
+  final String? logoUrl;
+  final bool isExpired;
+  final String userId;
+
+  _EnhancedJobCard({
+    required this.jobId,
+    required this.title,
+    required this.companyName,
+    required this.workLocation,
+    required this.employmentType,
+    required this.salaryRange,
+    required this.applicationDeadline,
+    this.logoUrl,
+    required this.isExpired,
+    required this.userId,
+  });
+
+  @override
+  __EnhancedJobCardState createState() => __EnhancedJobCardState();
+}
+
+class __EnhancedJobCardState extends State<_EnhancedJobCard> {
+  @override
+  Widget build(BuildContext context) {
     return Card(
-      color: Colors.white,
+      color: widget.isExpired ? Colors.grey[200] : Colors.white,
       margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       elevation: 3,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.blueAccent),
+        side: BorderSide(
+            color: widget.isExpired ? Colors.red : Colors.blueAccent),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -137,18 +187,16 @@ class _BookmarkedJobsScreenState extends State<BookmarkedJobsScreen> {
           children: [
             Row(
               children: [
-                logoUrl != null && logoUrl.isNotEmpty
+                widget.logoUrl != null && widget.logoUrl!.isNotEmpty
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.network(
-                          logoUrl,
+                          widget.logoUrl!,
                           width: 60,
                           height: 60,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            print('Error loading image: $error');
-                            return Icon(Icons.broken_image, color: Colors.grey);
-                          },
+                          errorBuilder: (context, error, stackTrace) =>
+                              Icon(Icons.broken_image, color: Colors.grey),
                         ),
                       )
                     : CircleAvatar(
@@ -163,7 +211,7 @@ class _BookmarkedJobsScreenState extends State<BookmarkedJobsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        title,
+                        widget.title,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -174,7 +222,7 @@ class _BookmarkedJobsScreenState extends State<BookmarkedJobsScreen> {
                       ),
                       SizedBox(height: 6),
                       Text(
-                        companyName,
+                        widget.companyName,
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[700],
@@ -185,22 +233,36 @@ class _BookmarkedJobsScreenState extends State<BookmarkedJobsScreen> {
                     ],
                   ),
                 ),
-                GestureDetector(
-                  onTap: () async {
-                    // Xóa bookmark
-                    await FirebaseFirestore.instance
-                        .collection('bookmarks')
-                        .doc(widget.userId)
-                        .collection('jobs')
-                        .doc(jobId)
-                        .delete();
-                  },
-                  child: Icon(
-                    Icons.bookmark,
-                    color: Colors.yellow,
-                    size: 30,
+                if (widget.isExpired)
+                  Text(
+                    'Hết hạn',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
+                if (!widget.isExpired)
+                  GestureDetector(
+                    onTap: () async {
+                      await FirebaseFirestore.instance
+                          .collection('bookmarks')
+                          .doc(widget.userId)
+                          .collection('jobs')
+                          .doc(widget.jobId)
+                          .delete();
+
+                      if (mounted) {
+                        setState(
+                            () {}); // Chỉ gọi setState khi widget còn tồn tại
+                      }
+                    },
+                    child: Icon(
+                      Icons.bookmark,
+                      color: Colors.yellow,
+                      size: 30,
+                    ),
+                  ),
               ],
             ),
             SizedBox(height: 12),
@@ -209,14 +271,14 @@ class _BookmarkedJobsScreenState extends State<BookmarkedJobsScreen> {
                 Icon(Icons.location_on, size: 20, color: Colors.blueAccent),
                 SizedBox(width: 4),
                 Text(
-                  workLocation,
+                  widget.workLocation,
                   style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                 ),
                 SizedBox(width: 16),
                 Icon(Icons.access_time, size: 20, color: Colors.blueAccent),
                 SizedBox(width: 4),
                 Text(
-                  employmentType,
+                  widget.employmentType,
                   style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                 ),
               ],
@@ -226,7 +288,7 @@ class _BookmarkedJobsScreenState extends State<BookmarkedJobsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  salaryRange,
+                  widget.salaryRange,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -234,7 +296,7 @@ class _BookmarkedJobsScreenState extends State<BookmarkedJobsScreen> {
                   ),
                 ),
                 Text(
-                  applicationDeadline,
+                  widget.applicationDeadline,
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.redAccent,

@@ -3,6 +3,7 @@ import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:jobfinder/screens/LoginScreen/login_screen.dart';
+import 'package:jobfinder/widgets/notification_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   @override
@@ -69,6 +70,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
 
+    // Kiểm tra đầu vào
     if (_selectedRole == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Vui lòng chọn vai trò trước khi đăng ký!')),
@@ -119,40 +121,86 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
-    // Đăng ký tài khoản
     try {
+      // Tạo tài khoản Firebase
       final authResult =
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
+      // Gửi email xác nhận
+      await authResult.user!.sendEmailVerification();
+
+      // Tạo mã ứng viên
+      final candidateCode = _generateCandidateCode();
+
+      // Thông tin người dùng
       final user = {
         'userId': authResult.user!.uid,
         'name': name,
         'email': email,
         'phoneNumber': _phoneNumber!,
         'role': _selectedRole!,
+        'candidateCode': candidateCode, // Lưu mã ứng viên
         'avatarUrl': null,
         'createdAt': DateTime.now().toIso8601String(),
       };
 
+      // Lưu thông tin người dùng vào Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user['userId'])
           .set(user);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đăng ký thành công!')),
+      // Hiển thị thông báo cục bộ
+      NotificationService.showNotification(
+        title: 'Đăng ký thành công!',
+        body: 'Hãy kiểm tra email của bạn để xác nhận tài khoản.',
       );
 
+      // Hiển thị thông báo SnackBar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản.'),
+        ),
+      );
+
+      // Điều hướng đến màn hình đăng nhập
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => LoginScreen()),
       );
     } catch (e) {
+      // Xử lý lỗi
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi đăng ký: ${e.toString()}')),
+      );
+    }
+  }
+
+  String _generateCandidateCode() {
+    final now = DateTime.now();
+    final random =
+        DateTime.now().millisecondsSinceEpoch.toString().substring(7);
+    return "C${now.year}${now.month.toString().padLeft(2, '0')}${random}";
+  }
+
+  Future<void> _checkEmailVerified(User user) async {
+    await user.reload(); // Tải lại thông tin người dùng
+    if (!user.emailVerified) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Vui lòng xác nhận email trước khi đăng nhập.'),
+        ),
+      );
+      FirebaseAuth.instance.signOut();
+    } else {
+      // Tiếp tục đăng nhập nếu email đã được xác nhận
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginScreen()),
       );
     }
   }

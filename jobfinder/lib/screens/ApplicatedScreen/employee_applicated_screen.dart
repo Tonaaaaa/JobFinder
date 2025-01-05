@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:jobfinder/screens/DetailScreen/detail_job_screen.dart';
 
 class UserApplicationsScreen extends StatefulWidget {
   final String userId;
@@ -59,26 +58,15 @@ class _UserApplicationsScreenState extends State<UserApplicationsScreen> {
 
                 final applications = snapshot.data!.docs.toList();
 
-                if (applications.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'Không tìm thấy công việc nào khớp với tìm kiếm.',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                  );
-                }
+                // Nhóm các ứng tuyển theo jobId
+                final groupedApplications =
+                    _groupApplicationsByJobId(applications);
 
                 return ListView.builder(
-                  itemCount: applications.length,
+                  itemCount: groupedApplications.length,
                   itemBuilder: (context, index) {
-                    final application = applications[index];
-                    final jobId = application['jobId'];
-                    final submittedAt =
-                        (application['submittedAt'] as Timestamp).toDate();
-
-                    if (jobId == null || jobId.isEmpty) {
-                      return SizedBox.shrink();
-                    }
+                    final applicationGroup = groupedApplications[index];
+                    final jobId = applicationGroup.first['jobId'];
 
                     return FutureBuilder<DocumentSnapshot>(
                       future: FirebaseFirestore.instance
@@ -91,46 +79,36 @@ class _UserApplicationsScreenState extends State<UserApplicationsScreen> {
                           return _buildLoadingCard();
                         }
 
-                        if (jobSnapshot.hasError) {
-                          return SizedBox.shrink();
-                        }
-
                         if (!jobSnapshot.hasData ||
                             jobSnapshot.data == null ||
                             !jobSnapshot.data!.exists) {
                           return _buildErrorCard(
-                              'Công việc không tồn tại: $jobId');
+                              'Công việc bạn đã ứng tuyển có thể đã bị xoá bài viết.');
                         }
 
                         final jobData =
-                            jobSnapshot.data!.data() as Map<String, dynamic>?;
+                            jobSnapshot.data!.data() as Map<String, dynamic>;
 
-                        if (jobData == null) {
-                          return _buildErrorCard(
-                              'Dữ liệu công việc không hợp lệ: $jobId');
-                        }
-
-                        final companyName =
-                            jobData['companyName']?.toString().toLowerCase() ??
-                                '';
-                        final title =
-                            jobData['title']?.toString().toLowerCase() ?? '';
+                        // Lấy trạng thái gần nhất
+                        final latestApplication = applicationGroup.first;
+                        final latestStatus =
+                            latestApplication['status'] ?? 'Không rõ';
+                        final submittedAt =
+                            (latestApplication['submittedAt'] as Timestamp)
+                                .toDate();
 
                         // Kiểm tra tìm kiếm
                         if (_searchQuery.isNotEmpty &&
-                            !companyName.contains(_searchQuery.toLowerCase()) &&
-                            !title.contains(_searchQuery.toLowerCase())) {
-                          return SizedBox
-                              .shrink(); // Ẩn nếu không khớp với tìm kiếm
+                            !_matchesSearchQuery(jobData, _searchQuery)) {
+                          return SizedBox.shrink();
                         }
-
-                        final status = application['status'] ?? 'Không rõ';
 
                         return _buildJobCard(
                           context: context,
                           jobData: jobData,
+                          latestStatus: latestStatus,
                           submittedAt: submittedAt,
-                          status: status,
+                          allApplications: applicationGroup,
                         );
                       },
                     );
@@ -164,6 +142,29 @@ class _UserApplicationsScreenState extends State<UserApplicationsScreen> {
     );
   }
 
+  List<List<DocumentSnapshot>> _groupApplicationsByJobId(
+      List<DocumentSnapshot> applications) {
+    final Map<String, List<DocumentSnapshot>> groupedMap = {};
+
+    for (var application in applications) {
+      final jobId = application['jobId'];
+      if (!groupedMap.containsKey(jobId)) {
+        groupedMap[jobId] = [];
+      }
+      groupedMap[jobId]!.add(application);
+    }
+
+    return groupedMap.values.toList();
+  }
+
+  bool _matchesSearchQuery(Map<String, dynamic> jobData, String query) {
+    final companyName =
+        (jobData['companyName'] as String?)?.toLowerCase() ?? '';
+    final title = (jobData['title'] as String?)?.toLowerCase() ?? '';
+    return companyName.contains(query.toLowerCase()) ||
+        title.contains(query.toLowerCase());
+  }
+
   Widget _buildLoadingCard() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -177,9 +178,20 @@ class _UserApplicationsScreenState extends State<UserApplicationsScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Text(
-          errorMessage,
-          style: TextStyle(fontSize: 14, color: Colors.red),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.error_outline,
+              color: Colors.red,
+              size: 30,
+            ),
+            SizedBox(height: 8),
+            Text(
+              errorMessage,
+              style: TextStyle(fontSize: 14, color: Colors.black87),
+            ),
+          ],
         ),
       ),
     );
@@ -188,24 +200,24 @@ class _UserApplicationsScreenState extends State<UserApplicationsScreen> {
   Widget _buildJobCard({
     required BuildContext context,
     required Map<String, dynamic> jobData,
+    required String latestStatus,
     required DateTime submittedAt,
-    required String status,
+    required List<DocumentSnapshot> allApplications,
   }) {
     final title = jobData['title'] ?? 'Không có tiêu đề';
     final companyName = jobData['companyName'] ?? 'Không rõ';
     final salaryRange = jobData['salaryRange'] ?? 'Thỏa thuận';
     final workLocation = jobData['workLocation'] ?? 'Không rõ';
 
-    // Nội dung trạng thái tùy chỉnh
+    // Trạng thái chính
     String statusMessage = '';
     Color statusColor = Colors.orange;
 
-    if (status == 'đã duyệt') {
-      statusMessage =
-          'Chúc mừng! Hồ sơ của bạn đã được duyệt ! nhà tuyển dụng sẽ sớm liên hệ với bạn qua email!';
+    if (latestStatus == 'đã duyệt') {
+      statusMessage = 'Chúc mừng! Hồ sơ của bạn đã được duyệt!';
       statusColor = Colors.green;
-    } else if (status == 'từ chối') {
-      statusMessage = 'Cảm ơn bạn đã ứng tuyển. Hồ sơ của bạn chưa phù hợp.';
+    } else if (latestStatus == 'từ chối') {
+      statusMessage = 'Hồ sơ của bạn chưa phù hợp.';
       statusColor = Colors.red;
     } else {
       statusMessage = 'Hồ sơ của bạn đang chờ duyệt.';
@@ -262,13 +274,57 @@ class _UserApplicationsScreenState extends State<UserApplicationsScreen> {
               'Ngày ứng tuyển: ${DateFormat('dd/MM/yyyy').format(submittedAt)}',
               style: TextStyle(fontSize: 14, color: Colors.grey[700]),
             ),
-            SizedBox(height: 8),
             Text(
               statusMessage,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: statusColor,
               ),
+            ),
+            SizedBox(height: 8),
+            // Hiển thị thêm nút xem lịch sử trạng thái
+            ExpansionTile(
+              title: Text(
+                "Xem lịch sử ứng tuyển",
+                style: TextStyle(fontSize: 14, color: Colors.blueAccent),
+              ),
+              children: allApplications.map((application) {
+                final status = application['status'] ?? 'Không rõ';
+                final appliedAt =
+                    (application['submittedAt'] as Timestamp).toDate();
+
+                // Xác định màu sắc cho từng trạng thái
+                Color statusColor;
+                switch (status.toLowerCase()) {
+                  case 'đã duyệt':
+                    statusColor = Colors.green; // Xanh lá cây
+                    break;
+                  case 'từ chối':
+                    statusColor = Colors.red; // Đỏ
+                    break;
+                  case 'đang chờ':
+                    statusColor = Colors.orange; // Cam
+                    break;
+                  case 'hết hạn':
+                    statusColor = Colors.grey; // Xám
+                    break;
+                  default:
+                    statusColor = Colors.blueAccent; // Màu xanh dương
+                }
+
+                return ListTile(
+                  title: Text(
+                    'Ngày ứng tuyển: ${DateFormat('dd/MM/yyyy').format(appliedAt)}',
+                  ),
+                  subtitle: Text(
+                    'Trạng thái: $status',
+                    style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
           ],
         ),

@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class UploadCVScreen extends StatefulWidget {
   final String jobId;
@@ -41,6 +43,34 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
     }
   }
 
+  Future<String?> _uploadFileToCloudinary(File file) async {
+    final cloudName = 'dtux2gqun'; // Cloud name của bạn
+    final uploadPreset = 'my_upload_preset'; // Upload preset của bạn
+
+    final url =
+        Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/auto/upload');
+
+    try {
+      final request = http.MultipartRequest('POST', url)
+        ..fields['upload_preset'] = uploadPreset
+        ..files.add(await http.MultipartFile.fromPath('file', file.path));
+
+      final response = await request.send();
+      final responseData = await http.Response.fromStream(response);
+
+      if (response.statusCode == 200) {
+        final responseJson = jsonDecode(responseData.body);
+        return responseJson['secure_url']; // Trả về URL của file đã tải lên
+      } else {
+        print('Error uploading file: ${responseData.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Exception uploading file: $e');
+      return null;
+    }
+  }
+
   Future<void> _submitApplication() async {
     if (_selectedFile == null) {
       setState(() {
@@ -64,12 +94,19 @@ class _UploadCVScreenState extends State<UploadCVScreen> {
     });
 
     try {
+      // Tải file lên Cloudinary
+      final cvUrl = await _uploadFileToCloudinary(_selectedFile!);
+
+      if (cvUrl == null) {
+        throw Exception("Lỗi khi tải lên Cloudinary");
+      }
+
       final applicationData = {
         'name': _nameController.text,
         'phone': _phoneController.text,
         'email': _emailController.text,
         'coverLetter': _coverLetterController.text,
-        'cvUrl': "uploaded_url_here", // Placeholder for actual upload URL
+        'cvUrl': cvUrl, // Sử dụng URL từ Cloudinary
         'jobId': widget.jobId,
         'userId': widget.userId,
         'status': 'chưa duyệt',

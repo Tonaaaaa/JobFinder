@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:jobfinder/models/job_post_model.dart';
 import 'package:jobfinder/screens/ApplyCVScreen/upload_cv_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:jobfinder/screens/LoginScreen/login_screen.dart';
 
 class JobDetailsScreen extends StatelessWidget {
   final Map<String, dynamic> jobData;
@@ -13,6 +13,8 @@ class JobDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('Dữ liệu công việc được truyền vào: $jobData');
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -39,10 +41,6 @@ class JobDetailsScreen extends StatelessWidget {
                       jobData['vacancies']?.toString() ?? 'Không xác định'),
                   _buildInfoRow(FontAwesomeIcons.venusMars, "Yêu cầu giới tính",
                       jobData['genderRequirement'] ?? 'Không yêu cầu'),
-                  // _buildInfoRow(
-                  //     FontAwesomeIcons.mapMarkerAlt,
-                  //     "Địa chỉ chi tiết",
-                  //     jobData['detailedAddress'] ?? 'Không xác định'),
                   Divider(color: Colors.grey),
                   _buildSectionHeader("Mô tả công việc"),
                   Text(
@@ -196,41 +194,63 @@ class JobDetailsScreen extends StatelessWidget {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
-              print('Job Data: $jobData');
-              final jobId =
-                  jobData['jobId'] ?? jobData['id']; // Kiểm tra cả hai trường
-              if (jobId != null && jobId.toString().isNotEmpty) {
-                Navigator.push(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (context, animation, secondaryAnimation) =>
-                        UploadCVScreen(
-                      jobId: jobId,
-                      userId: FirebaseAuth.instance.currentUser!.uid,
-                    ),
-                    transitionsBuilder:
-                        (context, animation, secondaryAnimation, child) {
-                      const begin =
-                          Offset(1.0, 0.0); // Hiệu ứng bắt đầu từ bên phải
-                      const end = Offset.zero; // Điểm kết thúc
-                      const curve = Curves.easeInOut; // Đường cong hiệu ứng
-                      var tween = Tween(begin: begin, end: end)
-                          .chain(CurveTween(curve: curve));
-                      var offsetAnimation = animation.drive(tween);
-                      return SlideTransition(
-                        position: offsetAnimation,
-                        child: child,
-                      );
-                    },
+            onPressed: () async {
+              // Kiểm tra nếu jobId không tồn tại hoặc trống
+              if (jobData['jobId'] == null || jobData['jobId'].isEmpty) {
+                print(
+                    'Lỗi: jobId không tồn tại hoặc trống. jobData = $jobData');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                        'Dữ liệu công việc không hợp lệ. Vui lòng thử lại.'),
                   ),
                 );
-              } else {
-                print('Dữ liệu công việc không hợp lệ: jobData = $jobData');
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Dữ liệu công việc không hợp lệ.')),
-                );
+                Navigator.pop(context); // Quay lại màn hình trước đó
+                return;
               }
+
+              final user = FirebaseAuth.instance.currentUser;
+              if (user == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Vui lòng đăng nhập để ứng tuyển.')),
+                );
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => LoginScreen()),
+                );
+                return;
+              }
+
+              final userDoc = await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .get();
+              final userRole = userDoc.data()?['role'] ?? 'guest';
+
+              if (userRole == 'guest') {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Vui lòng đăng nhập bằng tài khoản hợp lệ để ứng tuyển.',
+                    ),
+                  ),
+                );
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => LoginScreen()),
+                );
+                return;
+              }
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UploadCVScreen(
+                    jobId: jobData['jobId'],
+                    userId: user.uid,
+                  ),
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blueAccent,
@@ -286,13 +306,13 @@ class JobDetailsScreen extends StatelessWidget {
                 fontWeight: FontWeight.bold,
                 color: Colors.black87),
           ),
-          SizedBox(width: 8), // Thêm khoảng cách giữa label và value
+          SizedBox(width: 8),
           Flexible(
             child: Text(
               value,
               style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-              overflow: TextOverflow.visible, // Cho phép xuống dòng
-              maxLines: null, // Không giới hạn số dòng
+              overflow: TextOverflow.visible,
+              maxLines: null,
             ),
           ),
         ],
